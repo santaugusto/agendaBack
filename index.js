@@ -4,14 +4,37 @@ const mysql = require('mysql2/promise');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const serverless = require('serverless-http');
-
+const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 
 const app = express();
 const port = process.env.PORT ||8082;
 
 app.use(cors());
 app.use(express.json());
+
+// Configuração do Swagger
+const swaggerDefinition = {
+  openapi: '3.0.0',
+  info: {
+    title: 'API de Tarefas e Usuários',
+    version: '1.0.0',
+    description: 'Uma API para cadastro de usuários, login, e gerenciamento de tarefas.',
+  },
+  servers: [
+    {
+      url: `http://localhost:${port}/`,
+    },
+  ],
+};
+const options = {
+  swaggerDefinition,
+  apis: ['./index.js'], // Arquivo onde estão as rotas
+};
+const swaggerSpec = swaggerJsdoc(options);
+
+// Rota de documentação do Swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Cria um pool de conexões com o MySQL utilizando variáveis de ambiente
 const pool = mysql.createPool({
@@ -22,7 +45,46 @@ const pool = mysql.createPool({
 });
 
 
-// Endpoint para cadastro de usuário
+/**
+ * Endpoint para cadastro de usuário
+ * @swagger
+ * /cadastro:
+ *   post:
+ *     summary: Cadastra um novo usuário
+ *     description: Cria um novo usuário no banco de dados com nome, email e senha.
+ *     parameters:
+ *       - name: nome
+ *         in: body
+ *         description: Nome do usuário
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: email
+ *         in: body
+ *         description: E-mail do usuário
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: senha
+ *         in: body
+ *         description: Senha do usuário
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: confirmar_senha
+ *         in: body
+ *         description: Confirmação da senha
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       201:
+ *         description: Usuário cadastrado com sucesso!
+ *       400:
+ *         description: Falha na validação dos dados
+ *       500:
+ *         description: Erro interno do servidor
+ */
 app.post('/cadastro', async (req, res) => {
   const { nome, email, senha, confirmar_senha } = req.body;
 
@@ -59,6 +121,35 @@ app.post('/cadastro', async (req, res) => {
 });
 
 // Rota de Login
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: Realiza o login do usuário
+ *     description: Realiza o login e retorna um token JWT se as credenciais estiverem corretas.
+ *     parameters:
+ *       - name: email
+ *         in: body
+ *         description: E-mail do usuário
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: senha
+ *         in: body
+ *         description: Senha do usuário
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Login bem-sucedido com token JWT
+ *       400:
+ *         description: E-mail ou senha não fornecidos
+ *       401:
+ *         description: E-mail ou senha incorretos
+ *       500:
+ *         description: Erro interno do servidor
+ */
 app.post('/login', async (req, res) => {
   const { email, senha } = req.body;
 
@@ -95,6 +186,45 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// Rota para buscar as tarefas de um usuário
+/**
+ * @swagger
+ * /usuario/{id}/tasks:
+ *   get:
+ *     summary: Lista todas as tarefas de um usuário
+ *     description: Retorna todas as tarefas associadas ao usuário especificado pelo ID.
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: ID do usuário
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Lista de tarefas do usuário
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   text:
+ *                     type: string
+ *                   date:
+ *                     type: string
+ *                   priority:
+ *                     type: string
+ *                   folder:
+ *                     type: string
+ *       404:
+ *         description: Nenhuma tarefa encontrada para o usuário
+ *       500:
+ *         description: Erro interno do servidor
+ */
 app.get('/usuario/:id/tasks', async (req, res) => {
   const { id } = req.params;
 
@@ -113,6 +243,52 @@ app.get('/usuario/:id/tasks', async (req, res) => {
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 });
+
+/**
+ * @swagger
+ * /usuario/{id}/task:
+ *   post:
+ *     summary: Cria uma nova tarefa para o usuário
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         description: ID do usuário
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               text:
+ *                 type: string
+ *                 description: Descrição da tarefa
+ *               date:
+ *                 type: string
+ *                 format: date
+ *                 description: Data de vencimento da tarefa
+ *               priority:
+ *                 type: string
+ *                 description: Prioridade da tarefa
+ *               folder:
+ *                 type: string
+ *                 description: Pasta onde a tarefa está organizada
+ *             required:
+ *               - text
+ *               - date
+ *               - priority
+ *               - folder
+ *     responses:
+ *       201:
+ *         description: Tarefa criada com sucesso
+ *       400:
+ *         description: Dados faltando ou inválidos
+ *       500:
+ *         description: Erro interno
+ */
 
 app.post('/usuario/:id/task', async (req, res) => {
   const { id } = req.params;
@@ -137,7 +313,72 @@ app.post('/usuario/:id/task', async (req, res) => {
   }
 });
 
-
+/**
+*  /usuario/{usuarioId}/task/{taskId}:
+*    put:
+*      summary: Atualiza uma tarefa específica de um usuário.
+*      description: Atualiza os detalhes de uma tarefa associada ao usuário especificado.
+*      parameters:
+*        - name: usuarioId
+*          in: path
+*          description: ID do usuário.
+*          required: true
+*          type: integer
+*          format: int64
+*        - name: taskId
+*          in: path
+*          description: ID da tarefa a ser atualizada.
+*          required: true
+*          type: integer
+*          format: int64
+*        - name: text
+*          in: body
+*          description: Novo texto da tarefa.
+*          required: true
+*          schema:
+*            type: object
+*            properties:
+*              text:
+*                type: string
+*              date:
+*                type: string
+*                format: date
+*              priority:
+*                type: string
+*              folder:
+*                type: string
+*              concluded:
+*                type: boolean
+*      responses:
+*        200:
+*          description: Tarefa atualizada com sucesso.
+*          schema:
+*            type: object
+*            properties:
+*              message:
+*                type: string
+*        400:
+*          description: Todos os campos são obrigatórios.
+*          schema:
+*            type: object
+*            properties:
+*              message:
+*                type: string
+*        404:
+*          description: Tarefa não encontrada para este usuário.
+*          schema:
+*            type: object
+*            properties:
+*              message:
+*                type: string
+*        500:
+*          description: Erro interno ao atualizar a tarefa.
+*          schema:
+*            type: object
+*            properties:
+*              message:
+*                type: string
+ */
 app.put('/usuario/:usuarioId/task/:taskId', async (req, res) => {
   const { usuarioId, taskId } = req.params;
   const { text, date, priority, folder, concluded } = req.body;
@@ -217,8 +458,35 @@ app.post('/tasks', async (req, res) => {
   }
 });
 
+// Documentação Swagger para outras rotas
 /**
- * Endpoint para listar todas as tarefas.
+ * @swagger
+ * /tasks:
+ *   get:
+ *     summary: Lista todas as tarefas
+ *     description: Retorna todas as tarefas cadastradas no sistema.
+ *     responses:
+ *       200:
+ *         description: Lista de tarefas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   text:
+ *                     type: string
+ *                   date:
+ *                     type: string
+ *                   priority:
+ *                     type: string
+ *                   folder:
+ *                     type: string
+ *                   concluded:
+ *                     type: boolean
  */
 app.get('/tasks', async (req, res) => {
   try {
@@ -308,4 +576,3 @@ app.get('/tasks/week', async (req, res) => {
 app.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
 });
-// module.exports = serverless(app);
