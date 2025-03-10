@@ -23,7 +23,7 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: process.env.VERCEL_URL
+      url: process.env.NODE_ENV==='production'
       ? `https://${process.env.VERCEL_URL}/`
       : `http://localhost:${port}/`,
     },
