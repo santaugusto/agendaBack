@@ -34,7 +34,38 @@ const options = {
 const swaggerSpec = swaggerJsdoc(options);
 
 // Rota de documentação do Swagger
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api-docs', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Swagger UI</title>
+        <link href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3.51.0/swagger-ui.css" rel="stylesheet" />
+        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3.51.0/swagger-ui-bundle.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3.51.0/swagger-ui-standalone-preset.js"></script>
+      </head>
+      <body>
+        <div id="swagger-ui"></div>
+        <script>
+          const ui = SwaggerUIBundle({
+            url: '/api-docs.json',  // URL do Swagger JSON
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            presets: [
+              SwaggerUIBundle.presets.apis,
+              SwaggerUIStandalonePreset
+            ]
+          });
+        </script>
+      </body>
+    </html>
+  `);
+});
+app.get('/api-docs.json', (req, res) => {
+  res.json(swaggerSpec);  // Expondo o swaggerSpec como JSON
+});
 
 // Cria um pool de conexões com o MySQL utilizando variáveis de ambiente
 const pool = mysql.createPool({
