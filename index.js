@@ -21,13 +21,7 @@ const swaggerDefinition = {
     version: '1.0.0',
     description: 'Uma API para cadastro de usuários, login, e gerenciamento de tarefas.',
   },
-  servers: [
-    {
-      url: process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}/`
-      : `http://localhost:${port}/`,
-    },
-  ],
+
 };
 const options = {
   swaggerDefinition,
