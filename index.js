@@ -4,7 +4,7 @@ const mysql = require('mysql2/promise');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
+const serverless = require('serverless-http');
 
 
 const app = express();
@@ -51,13 +51,12 @@ app.post('/cadastro', async (req, res) => {
     const [result] = await pool.query(query, [nome, email, hashedPassword]);
 
     // Retornando resposta com sucesso
-    res.status(201).json({ message: 'Usuário cadastrado com sucesso!' });
+    return res.status(201).json({ message: 'Usuário cadastrado com sucesso!' });
   } catch (err) {
     console.error('Erro ao processar o cadastro:', err);
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 });
-
 
 // Rota de Login
 app.post('/login', async (req, res) => {
@@ -95,8 +94,6 @@ app.post('/login', async (req, res) => {
     return res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 });
-
-
 
 app.get('/usuario/:id/tasks', async (req, res) => {
   const { id } = req.params;
@@ -195,8 +192,6 @@ app.delete('/usuario/:usuarioId/task/:taskId', async (req, res) => {
   }
 });
 
-
-
 /**
  * Endpoint para adicionar uma nova tarefa.
  * Recebe no corpo da requisição os campos: text, date, priority e folder.
@@ -228,10 +223,10 @@ app.post('/tasks', async (req, res) => {
 app.get('/tasks', async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT * FROM tasks');
-    res.json(rows);
+    return res.json(rows);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Erro ao buscar as tarefas.' });
+   return res.status(500).json({ error: 'Erro ao buscar as tarefas.' });
   }
 });
 
@@ -309,7 +304,8 @@ app.get('/tasks/week', async (req, res) => {
   }
 });
 
-// Inicializa o servidor
-app.listen(port, () => {
-  console.log(`Servidor rodando na porta ${port}`);
-});
+// // Inicializa o servidor
+// app.listen(port, () => {
+//   console.log(`Servidor rodando na porta ${port}`);
+// });
+module.exports = serverless(app);
