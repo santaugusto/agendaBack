@@ -23,9 +23,7 @@ const swaggerDefinition = {
   },
   servers: [
     {
-      url: process.env.NODE_ENV==='production'
-      ? `https://${process.env.VERCEL_URL}/`
-      : `http://localhost:${port}/`,
+      url:'https://agenda-back-sanntaugustos-projects.vercel.app'
     },
   ],
 };
